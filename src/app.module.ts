@@ -7,6 +7,7 @@ import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SeedersModule } from './seeders/seeders.module';
+import { CustomLogger } from 'src/logger.service';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SeedersModule } from './seeders/seeders.module';
     SeedersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CustomLogger],
+  exports: [CustomLogger],
 })
 export class AppModule {}

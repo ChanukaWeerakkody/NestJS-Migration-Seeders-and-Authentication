@@ -10,13 +10,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from 'src/entity/user.entity';
 import { CreateUsersDto } from './dto/create-users.dto';
-import { randomBytes } from 'crypto';
+import { CustomException } from 'src/exception/custom.exception';
+import { CustomLogger } from 'src/logger.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly logger: CustomLogger,
     private readonly datasource: DataSource,
   ) {}
 
@@ -29,11 +31,12 @@ export class UsersService {
 
 
   async create(createUserDto: CreateUsersDto): Promise<any> {
+    this.logger.log('Creating a new user...');
     const { email, contact_number } = createUserDto;
     try {
       const userExists = await this.checkUserExists(email, contact_number);
       if (userExists) {
-        throw new ConflictException('User with the same email or contact number already exists');
+        return new CustomException('User with the same email or contact number already exists');
       }
 
       // Hash the provided password from createUserDto
@@ -48,7 +51,7 @@ export class UsersService {
       return newUser;
     } catch (e) {
       console.log(e);
-      throw new InternalServerErrorException();
+      throw new ConflictException("Failed to create user");
     }
   }
 

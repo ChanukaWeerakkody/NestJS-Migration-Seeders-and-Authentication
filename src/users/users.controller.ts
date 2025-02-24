@@ -34,7 +34,7 @@ export class UsersController {
    @Post()
   async createUser(@Body() createUserDto: CreateUsersDto): Promise<any> {
     console.log("save user")
-    return await this.handleServiceError(() => this.userService.create(createUserDto));
+    return await this.userService.create(createUserDto);
   }
 
   @Patch(':id')
