@@ -9,7 +9,7 @@ export default new DataSource({
   host: "localhost",
   port: 3306,
   username: "root",
-  password: "1234",
+  password: "chanuka1234",
   database: "nestJsMigration",
   migrations: ['migration/**'],
   entities: [__dirname + 'src/**/*.entity{.ts,.js}'],

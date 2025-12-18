@@ -1,39 +1,65 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-ioredis-yet';
+import * as Joi from 'joi';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SeedersModule } from './seeders/seeders.module';
-import { CustomLogger } from 'src/logger.service';
+import { CustomLogger } from './logger.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      isGlobal: true,
       envFilePath: ['.env', '.env.local', '.env.dev', '.env.sample'],
       validationSchema: Joi.object({
-        DATABASE_HOST: Joi.required(),
-        DATABASE_PORT: Joi.required(),
-        DATABASE_USER: Joi.required(),
-        DATABASE_PASSWORD: Joi.required(),
-        DATABASE_NAME: Joi.required(),
-        DATABSE_AUTO_LOAD_ENTITIES: Joi.required().default(true),
-        DATABSE_SYNCHRONIZE: Joi.required().default(true),
-        REDIS_HOST: Joi.required(),
-        REDIS_PORT: Joi.required(),
+        DATABASE_HOST: Joi.string().required(),
+        DATABASE_PORT: Joi.number().required(),
+        DATABASE_USER: Joi.string().required(),
+        DATABASE_PASSWORD: Joi.string().required(),
+        DATABASE_NAME: Joi.string().required(),
+        DATABASE_AUTO_LOAD_ENTITIES: Joi.boolean().default(true),
+        DATABASE_SYNCHRONIZE: Joi.boolean().default(true),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.number().required(),
+        REDIS_PASSWORD: Joi.string().required(),
+        PORT: Joi.number().default(4000),
       }),
     }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DATABASE_HOST,
-      port: +process.env.DATABASE_PORT,
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
-      autoLoadEntities: process.env.DATABSE_AUTO_LOAD_ENTITIES === 'true',
-      synchronize: process.env.DATABSE_SYNCHRONIZE === 'true',
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const store = await redisStore({
+          host: configService.get<string>('REDIS_HOST'),
+          port: Number(configService.get<string>('REDIS_PORT')),
+          password: configService.get<string>('REDIS_PASSWORD'),
+          ttl: 3600000,
+        });
+        return {
+          store: store as any,
+        };
+      },
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DATABASE_HOST'),
+        port: Number(configService.get<string>('DATABASE_PORT')),
+        username: configService.get<string>('DATABASE_USER'),
+        password: configService.get<string>('DATABASE_PASSWORD'),
+        database: configService.get<string>('DATABASE_NAME'),
+        autoLoadEntities: configService.get<boolean>('DATABASE_AUTO_LOAD_ENTITIES'),
+        synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE'),
+      }),
     }),
     AuthModule,
     UsersModule,
